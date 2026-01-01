@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Spelling Quest</title>
+    <style>
+        body { font-family: 'Comic Sans MS', sans-serif; text-align: center; background-color: #f7f9fc; padding: 20px; }
+        .game-box { background: white; padding: 30px; border-radius: 25px; box-shadow: 0 10px 0 #3b4cca; display: inline-block; min-width: 350px; border: 4px solid #3b4cca; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 20px; font-weight: bold; }
+        .level-badge { background: #ffcb05; padding: 5px 15px; border-radius: 20px; border: 2px solid #3b4cca; }
+        .score-badge { background: #4caf50; color: white; padding: 5px 15px; border-radius: 20px; }
+        input { font-size: 24px; padding: 10px; width: 80%; border-radius: 10px; border: 3px solid #3b4cca; margin: 20px 0; text-align: center; text-transform: lowercase; }
+        button { font-size: 20px; padding: 12px 25px; background: #e63946; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #3b4cca; transform: scale(1.1); }
+        
+        /* Reward Pop-up */
+        #reward-modal { display: none; position: fixed; z-index: 10; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }
+        .card-anim { background: white; margin: 5% auto; padding: 20px; border-radius: 20px; width: 300px; border: 8px solid #ffcb05; box-shadow: 0 0 30px #ffcb05; }
+        .card-anim img { width: 100%; border-radius: 10px; border: 2px solid #ddd; }
+        #message { height: 20px; margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="game-box">
+    <div class="stats">
+        <div class="level-badge">LEVEL <span id="lvl-num">1</span></div>
+        <div class="score-badge">WINS: <span id="score-num">0</span></div>
+    </div>
+    
+    <h1>Spell the Number: <br><span id="target-digit" style="font-size: 80px; color:#3b4cca">1</span></h1>
+    
+    <input type="text" id="user-input" placeholder="type the word..." autocomplete="off">
+    <br>
+    <button onclick="checkAnswer()">GOTTA CATCH IT!</button>
+    <div id="message"></div>
+</div>
+
+<div id="reward-modal">
+    <div class="card-anim">
+        <h2 style="color:#3b4cca; margin: 5px;">YOU CAUGHT IT!</h2>
+        <img id="monster-img" src="" alt="Monster Card">
+        <p id="monster-name" style="font-weight:bold; font-size: 1.4em; color: #e63946;"></p>
+        <button onclick="closeModal()">NEXT CHALLENGE</button>
+    </div>
+</div>
+
+<script>
+    // 1. DATA: How to spell numbers
+    const numWords = {
+        1:"one", 2:"two", 3:"three", 4:"four", 5:"five", 6:"six", 7:"seven", 8:"eight", 9:"nine", 10:"ten",
+        11:"eleven", 12:"twelve", 13:"thirteen", 14:"fourteen", 15:"fifteen", 16:"sixteen", 17:"seventeen", 18:"eighteen", 19:"nineteen", 20:"twenty",
+        21:"twenty-one", 22:"twenty-two", 25:"twenty-five", 30:"thirty", 35:"thirty-five", 40:"forty", 
+        45:"forty-five", 50:"fifty", 55:"fifty-five", 60:"sixty", 70:"seventy", 80:"eighty", 90:"ninety", 100:"hundred"
+    };
+
+    // 2. DATA: 20 Monster Cards (REPLACE THE FILENAMES BELOW)
+    const monsterCards = [
+        { name: "Monster #1", img: "card1.jpg" },
+        { name: "Monster #2", img: "card2.jpg" },
+        { name: "Monster #3", img: "card3.jpg" },
+        { name: "Monster #4", img: "card4.jpg" },
+        { name: "Monster #5", img: "card5.jpg" },
+        { name: "Monster #6", img: "card6.jpg" },
+        { name: "Monster #7", img: "card7.jpg" },
+        { name: "Monster #8", img: "card8.jpg" },
+        { name: "Monster #9", img: "card9.jpg" },
+        { name: "Monster #10", img: "card10.jpg" },
+        { name: "Monster #11", img: "card11.jpg" },
+        { name: "Monster #12", img: "card12.jpg" },
+        { name: "Monster #13", img: "card13.jpg" },
+        { name: "Monster #14", img: "card14.jpg" },
+        { name: "Monster #15", img: "card15.jpg" },
+        { name: "Monster #16", img: "card16.jpg" },
+        { name: "Monster #17", img: "card17.jpg" },
+        { name: "Monster #18", img: "card18.jpg" },
+        { name: "Monster #19", img: "card19.jpg" },
+        { name: "Monster #20", img: "card20.jpg" }
+    ];
+
+    let currentLevel = 1;
+    let score = 0;
+    let targetNumber = 0;
+
+    function getNumberForLevel() {
+        if (currentLevel === 1) return Math.floor(Math.random() * 20) + 1; // 1-20
+        if (currentLevel === 2) return Math.floor(Math.random() * 21) + 20; // 20-40
+        if (currentLevel === 3) return Math.floor(Math.random() * 21) + 40; // 40-60
+        if (currentLevel === 4) return Math.floor(Math.random() * 61) + 40; // 40-100
+    }
+
+    function setupGame() {
+        // Level up logic: every 5 wins, increase level
+        if (score >= 5 && score < 10) currentLevel = 2;
+        else if (score >= 10 && score < 15) currentLevel = 3;
+        else if (score >= 15) currentLevel = 4;
+
+        targetNumber = getNumberForLevel();
+        
+        // Ensure the number is in our dictionary
+        if(!numWords[targetNumber]) targetNumber = 10; 
+
+        document.getElementById('target-digit').innerText = targetNumber;
+        document.getElementById('lvl-num').innerText = currentLevel;
+        document.getElementById('score-num').innerText = score;
+        document.getElementById('user-input').value = "";
+        document.getElementById('message').innerText = "";
+    }
+
+    function checkAnswer() {
+        let answer = document.getElementById('user-input').value.toLowerCase().trim();
+        let correctWord = numWords[targetNumber];
+
+        if (answer === correctWord) {
+            score++;
+            showReward();
+        } else {
+            document.getElementById('message').innerText = "Try again! It starts with '" + correctWord.charAt(0) + "'";
+            document.getElementById('message').style.color = "#e63946";
+        }
+    }
+
+    function showReward() {
+        let monster = monsterCards[Math.floor(Math.random() * monsterCards.length)];
+        document.getElementById('monster-img').src = monster.img;
+        document.getElementById('monster-name').innerText = monster.name;
+        document.getElementById('reward-modal').style.display = "block";
+    }
+
+    function closeModal() {
+        document.getElementById('reward-modal').style.display = "none";
+        setupGame();
+    }
+
+    setupGame();
+</script>
+</body>
+</html>
